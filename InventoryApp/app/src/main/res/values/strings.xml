@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Inventory App</string>
+
+    <!-- Login screen -->
+    <string name="login_title">Inventory App</string>
+    <string name="login_subtitle">Sign in to continue</string>
+    <string name="hint_username">Username</string>
+    <string name="hint_password">Password</string>
+    <string name="button_login">Log In</string>
+    <string name="button_create_account">Create Account</string>
+
+    <!-- Inventory grid -->
+    <string name="title_inventory">Inventory</string>
+    <string name="fab_add_item_description">Add new item</string>
+    <string name="menu_settings">SMS Settings</string>
+    <string name="menu_logout">Log Out</string>
+    <string name="empty_inventory">No items yet. Tap + to add one.</string>
+
+    <!-- Item detail -->
+    <string name="title_item_detail">Item Details</string>
+    <string name="label_quantity">Quantity</string>
+    <string name="button_increase">+</string>
+    <string name="button_decrease">−</string>
+    <string name="button_delete">Delete Item</string>
+
+    <!-- Add item dialog -->
+    <string name="dialog_add_title">Add New Item</string>
+    <string name="hint_item_name">Item name</string>
+    <string name="hint_starting_quantity">Starting quantity</string>
+    <string name="button_save">Save</string>
+    <string name="button_cancel">Cancel</string>
+
+    <!-- SMS settings -->
+    <string name="title_sms_settings">SMS Notifications</string>
+    <string name="sms_explanation">Get a text message when an item drops below 5 in stock.</string>
+    <string name="hint_phone_number">Phone number (e.g. 5551234567)</string>
+    <string name="button_enable_sms">Enable SMS Alerts</string>
+    <string name="status_permission_granted">Permission granted</string>
+    <string name="status_permission_denied">Permission denied</string>
+    <string name="status_permission_not_set">Permission not yet requested</string>
+</resources>
