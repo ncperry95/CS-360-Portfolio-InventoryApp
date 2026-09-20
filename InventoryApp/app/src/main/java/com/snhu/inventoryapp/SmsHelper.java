@@ -10,84 +10,77 @@ import android.util.Log;
 import androidx.core.content.ContextCompat;
 
 /**
- * Wraps everything the rest of the app needs to know about SMS.
+ * Everything the app needs to know about SMS, plus the one place that owns
+ * the SMS preferences file and its keys.
  *
- * Centralizing this here means the inventory screens never have to handle
- * Android permission APIs or SmsManager directly. If permission was denied
- * or no phone number is saved, sendLowStockAlert quietly does nothing so
- * the rest of the app keeps working.
+ * The original had SmsSettingsActivity re typing the preferences name and a
+ * second key as string literals; those now go through this class. The low
+ * stock threshold moved to domain.LowStockRule so the rule is not tied to the
+ * delivery mechanism.
  */
-public class SmsHelper {
+public final class SmsHelper {
 
-    // Items at or below this number count as low stock
-    public static final int LOW_STOCK_THRESHOLD = 5;
-
-    // SharedPreferences keys for the saved phone number
     private static final String PREFS_NAME = "sms_prefs";
     private static final String KEY_PHONE_NUMBER = "phone_number";
+    private static final String KEY_ASKED_BEFORE = "asked_before";
 
     private static final String TAG = "SmsHelper";
 
-    /**
-     * Returns true only when SEND_SMS permission has been granted by the user.
-     * The rest of the app uses this as a single yes or no check.
-     */
+    private SmsHelper() {
+    }
+
     public static boolean isSmsPermissionGranted(Context context) {
         int status = ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS);
         return status == PackageManager.PERMISSION_GRANTED;
     }
 
-    /**
-     * Reads the phone number the user saved in SMS Settings.
-     * Returns an empty string if nothing has been saved yet.
-     */
     public static String getSavedPhoneNumber(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return prefs.getString(KEY_PHONE_NUMBER, "");
+        return prefs(context).getString(KEY_PHONE_NUMBER, "");
     }
 
-    /**
-     * Saves the phone number the user entered in SMS Settings so future
-     * alerts know where to go.
-     */
     public static void savePhoneNumber(Context context, String phoneNumber) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        prefs.edit().putString(KEY_PHONE_NUMBER, phoneNumber).apply();
+        prefs(context).edit().putString(KEY_PHONE_NUMBER, phoneNumber).apply();
+    }
+
+    /** Whether the permission prompt has ever been shown. */
+    public static boolean hasAskedBefore(Context context) {
+        return prefs(context).getBoolean(KEY_ASKED_BEFORE, false);
+    }
+
+    public static void markAskedBefore(Context context) {
+        prefs(context).edit().putBoolean(KEY_ASKED_BEFORE, true).apply();
     }
 
     /**
-     * Sends a low stock alert if (and only if) all three of these are true:
-     *   1. SEND_SMS permission has been granted
-     *   2. A phone number has been saved
-     *   3. SmsManager actually accepts the send
-     *
-     * If any of those fail, the method quietly returns without throwing.
-     * The rest of the app keeps working either way, which is what the
-     * rubric calls for.
+     * Sends a low stock alert if permission is granted and a number is saved.
+     * Returns true when a send was attempted, false when it was skipped or
+     * failed, so callers can log or ignore as they see fit.
      */
-    public static void sendLowStockAlert(Context context, String itemName, int quantity) {
-        // Bail out early if the user has not granted permission yet
+    public static boolean sendLowStockAlert(Context context, String itemName, int quantity) {
         if (!isSmsPermissionGranted(context)) {
-            return;
+            return false;
         }
-
-        // Bail out if the user never saved a phone number
         String phoneNumber = getSavedPhoneNumber(context);
         if (phoneNumber.isEmpty()) {
-            return;
+            return false;
         }
-
-        // Build the alert text and hand it to SmsManager
-        String message = "Low stock alert: \"" + itemName
-                + "\" is down to " + quantity + ". Time to restock.";
+        String message = context.getString(R.string.sms_low_stock_message, itemName, quantity);
         try {
-            SmsManager smsManager = SmsManager.getDefault();
+            SmsManager smsManager = context.getSystemService(SmsManager.class);
+            if (smsManager == null) {
+                smsManager = SmsManager.getDefault();
+            }
             smsManager.sendTextMessage(phoneNumber, null, message, null, null);
-        } catch (Exception e) {
-            // SmsManager can throw if the phone number is malformed or the
-            // device cannot send. We swallow it so the inventory screen
-            // never crashes because of a bad SMS attempt.
+            return true;
+        } catch (IllegalArgumentException | SecurityException e) {
+            // Malformed number or permission revoked mid session. Log and
+            // keep the inventory screen alive; a failed text is not fatal.
             Log.w(TAG, "Could not send SMS alert", e);
+            return false;
         }
+    }
+
+    private static SharedPreferences prefs(Context context) {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 }

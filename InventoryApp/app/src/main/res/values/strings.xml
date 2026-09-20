@@ -39,4 +39,37 @@
     <string name="status_permission_granted">Permission granted</string>
     <string name="status_permission_denied">Permission denied</string>
     <string name="status_permission_not_set">Permission not yet requested</string>
+    <string name="sms_low_stock_message">Low stock alert: \"%1$s\" is down to %2$d. Time to restock.</string>
+    <string name="toast_sms_enabled">SMS alerts enabled.</string>
+    <string name="toast_sms_disabled">SMS alerts disabled. The app will still work without them.</string>
+    <string name="toast_sms_already_enabled">SMS alerts are already enabled.</string>
+    <string name="toast_phone_saved">Phone number saved.</string>
+    <string name="error_phone_required">Please enter a phone number.</string>
+
+    <!-- Login and account errors -->
+    <string name="error_fields_required">Please enter a username and password.</string>
+    <string name="error_invalid_login">Invalid username or password.</string>
+    <string name="error_username_taken">That username is already taken.</string>
+    <string name="error_username_too_long">Username must be 32 characters or fewer.</string>
+    <string name="error_password_too_short">Password must be at least 8 characters.</string>
+    <string name="error_password_too_long">Password must be 128 characters or fewer.</string>
+    <string name="error_password_no_letter">Password must include at least one letter.</string>
+    <string name="error_password_no_digit">Password must include at least one number.</string>
+    <string name="error_create_failed">Could not create account. Please try again.</string>
+    <string name="error_session_expired">Your session has ended. Please log in again.</string>
+
+    <!-- Form validation -->
+    <string name="error_required">Required</string>
+    <string name="error_must_be_number">Must be a whole number</string>
+    <string name="error_quantity_negative">Quantity cannot be negative</string>
+
+    <!-- Inventory results -->
+    <string name="error_add_failed">Could not save the item. Please try again.</string>
+    <string name="error_item_not_found">That item no longer exists.</string>
+    <string name="error_update_failed">Could not update the item.</string>
+
+    <!-- Delete confirmation -->
+    <string name="dialog_delete_title">Delete item</string>
+    <string name="dialog_delete_message">Remove \"%1$s\" from inventory?</string>
+    <string name="button_delete_confirm">Delete</string>
 </resources>

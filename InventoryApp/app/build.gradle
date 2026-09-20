@@ -12,7 +12,9 @@ android {
 
     defaultConfig {
         applicationId "com.snhu.inventoryapp"
-        minSdk 24
+        // Raised from 24: PBKDF2WithHmacSHA256 is registered with
+        // SecretKeyFactory starting at API 26 (Android 8.0).
+        minSdk 26
         targetSdk 36
         versionCode 1
         versionName "1.0"
@@ -39,6 +41,8 @@ dependencies {
     implementation libs.constraintlayout
     implementation libs.material
     implementation libs.recyclerview
+    implementation libs.lifecycle.viewmodel
+    implementation libs.lifecycle.livedata
     testImplementation libs.junit
     androidTestImplementation libs.espresso.core
     androidTestImplementation libs.ext.junit
