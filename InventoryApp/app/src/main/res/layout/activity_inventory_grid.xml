@@ -18,6 +18,29 @@
         app:title="@string/title_inventory"
         app:titleTextColor="@color/text_primary" />
 
+    <TextView
+        android:id="@+id/text_low_stock"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:clickable="true"
+        android:ellipsize="end"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:maxLines="2"
+        android:paddingStart="16dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="10dp"
+        android:textColor="@color/accent"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        tools:text="Low stock: Widget (2), Bolts (3), Nuts (4) and 2 more"
+        tools:visibility="visible" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_inventory"
         android:layout_width="match_parent"
@@ -27,7 +50,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintTop_toBottomOf="@id/text_low_stock"
         tools:listitem="@layout/item_inventory_cell"
         tools:spanCount="2" />
 

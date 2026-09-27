@@ -7,20 +7,27 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.snhu.inventoryapp.domain.LowStockRule;
 
 /**
  * Adapter that fills the inventory grid with one card per item.
  *
- * Still does a full notifyDataSetChanged on setItems. Replacing that with
- * DiffUtil is part of Enhancement Two, where the list gets search and sort.
+ * Extends ListAdapter so every new list goes through DiffUtil on a
+ * background thread. The original called notifyDataSetChanged on every
+ * change, which throws away every bound view and rebinds all of them even
+ * when one quantity moved by one. DiffUtil compares the old and new lists
+ * (O(n) in practice, with a worst case of O(n + d^2) where d is the edit
+ * distance) and dispatches only the inserts, removes and changes that
+ * actually happened. That is what makes search feel instant and restores
+ * the RecyclerView item animations for free.
  */
-public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.ViewHolder> {
+public class InventoryAdapter extends ListAdapter<InventoryItem, InventoryAdapter.ViewHolder> {
 
     public interface OnItemActionListener {
         void onItemClick(InventoryItem item);
@@ -28,17 +35,31 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
         void onDeleteClick(InventoryItem item);
     }
 
-    private final List<InventoryItem> items = new ArrayList<>();
+    /**
+     * Two entries are the same item when their row ids match. Their
+     * contents are the same when name and quantity match, which is exactly
+     * InventoryItem.equals once the ids are known to be equal.
+     */
+    static final DiffUtil.ItemCallback<InventoryItem> DIFF_CALLBACK =
+            new DiffUtil.ItemCallback<InventoryItem>() {
+                @Override
+                public boolean areItemsTheSame(@NonNull InventoryItem oldItem,
+                                               @NonNull InventoryItem newItem) {
+                    return oldItem.getId() == newItem.getId();
+                }
+
+                @Override
+                public boolean areContentsTheSame(@NonNull InventoryItem oldItem,
+                                                  @NonNull InventoryItem newItem) {
+                    return oldItem.equals(newItem);
+                }
+            };
+
     private final OnItemActionListener listener;
 
     public InventoryAdapter(OnItemActionListener listener) {
+        super(DIFF_CALLBACK);
         this.listener = listener;
-    }
-
-    public void setItems(List<InventoryItem> newItems) {
-        items.clear();
-        items.addAll(newItems);
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -51,16 +72,15 @@ public class InventoryAdapter extends RecyclerView.Adapter<InventoryAdapter.View
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        final InventoryItem item = items.get(position);
+        final InventoryItem item = getItem(position);
         holder.textName.setText(item.getName());
         holder.textQuantity.setText(String.valueOf(item.getQuantity()));
+
+        int color = LowStockRule.isLowStock(item.getQuantity()) ? R.color.error : R.color.primary;
+        holder.textQuantity.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), color));
+
         holder.card.setOnClickListener(v -> listener.onItemClick(item));
         holder.buttonDelete.setOnClickListener(v -> listener.onDeleteClick(item));
-    }
-
-    @Override
-    public int getItemCount() {
-        return items.size();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

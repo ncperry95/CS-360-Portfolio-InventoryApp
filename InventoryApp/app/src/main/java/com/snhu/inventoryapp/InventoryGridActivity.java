@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -20,13 +21,21 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.snhu.inventoryapp.domain.ItemSortOrder;
 import com.snhu.inventoryapp.ui.DeleteConfirmationDialog;
 import com.snhu.inventoryapp.ui.InventoryViewModel;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Main screen after login. Renders whatever InventoryViewModel publishes and
  * forwards taps to it. The user id is no longer passed in through the Intent;
  * the ViewModel reads it from the session.
+ *
+ * Search text, sort choice and the low stock filter are forwarded to the
+ * ViewModel and nothing is filtered or sorted here. The grid gets its list
+ * through ListAdapter.submitList so DiffUtil works out what changed.
  */
 public class InventoryGridActivity extends AppCompatActivity {
 
@@ -35,6 +44,7 @@ public class InventoryGridActivity extends AppCompatActivity {
     private InventoryViewModel viewModel;
     private InventoryAdapter adapter;
     private TextView textEmpty;
+    private TextView textLowStock;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +68,9 @@ public class InventoryGridActivity extends AppCompatActivity {
         }
 
         textEmpty = findViewById(R.id.text_empty);
+        textLowStock = findViewById(R.id.text_low_stock);
+        textLowStock.setOnClickListener(v -> viewModel.toggleLowStockOnly());
+
         RecyclerView recycler = findViewById(R.id.recycler_inventory);
         recycler.setLayoutManager(new GridLayoutManager(this, 2));
         adapter = new InventoryAdapter(new InventoryAdapter.OnItemActionListener() {
@@ -80,9 +93,18 @@ public class InventoryGridActivity extends AppCompatActivity {
         fab.setOnClickListener(v -> showAddItemDialog());
 
         viewModel.getItems().observe(this, items -> {
-            adapter.setItems(items);
-            textEmpty.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+            adapter.submitList(items);
+            if (items.isEmpty()) {
+                textEmpty.setText(viewModel.isFiltered()
+                        ? R.string.empty_filtered
+                        : R.string.empty_inventory);
+                textEmpty.setVisibility(View.VISIBLE);
+            } else {
+                textEmpty.setVisibility(View.GONE);
+            }
         });
+
+        viewModel.getLowStockSummary().observe(this, this::renderLowStockBanner);
 
         viewModel.getMessage().observe(this, event -> {
             InventoryViewModel.Message msg = event.getContentIfNotHandled();
@@ -110,17 +132,122 @@ public class InventoryGridActivity extends AppCompatActivity {
         viewModel.refresh();
     }
 
+    // -------------------- Low stock banner --------------------
+
+    private void renderLowStockBanner(InventoryViewModel.LowStockSummary summary) {
+        if (summary == null || summary.isEmpty()) {
+            textLowStock.setVisibility(View.GONE);
+            if (viewModel.isLowStockOnly()) {
+                // Nothing is low any more; drop the filter so the grid is not stuck empty.
+                viewModel.setLowStockOnly(false);
+            }
+            return;
+        }
+        if (viewModel.isLowStockOnly()) {
+            textLowStock.setText(R.string.low_stock_showing_only);
+        } else {
+            List<String> entries = new ArrayList<>(summary.lowest.size());
+            for (InventoryItem item : summary.lowest) {
+                entries.add(getString(R.string.low_stock_entry, item.getName(), item.getQuantity()));
+            }
+            String joined = String.join(", ", entries);
+            int more = summary.total - summary.lowest.size();
+            textLowStock.setText(more > 0
+                    ? getString(R.string.low_stock_banner_more, joined, more)
+                    : getString(R.string.low_stock_banner, joined));
+        }
+        textLowStock.setVisibility(View.VISIBLE);
+    }
+
     // -------------------- Toolbar menu --------------------
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_inventory, menu);
+
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+        if (searchView != null) {
+            searchView.setQueryHint(getString(R.string.search_hint));
+            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                @Override
+                public boolean onQueryTextSubmit(String text) {
+                    searchView.clearFocus();
+                    return true;
+                }
+
+                @Override
+                public boolean onQueryTextChange(String text) {
+                    viewModel.setQuery(text);
+                    return true;
+                }
+            });
+
+            // Rotation keeps the ViewModel but rebuilds the menu, so put the
+            // search text back where the user left it.
+            String current = viewModel.getQuery();
+            if (!current.isEmpty()) {
+                searchItem.expandActionView();
+                searchView.setQuery(current, false);
+                searchView.clearFocus();
+            }
+        }
+
+        searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                return true;
+            }
+
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                viewModel.setQuery("");
+                return true;
+            }
+        });
         return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        int checkedId;
+        switch (viewModel.getSortOrder()) {
+            case QUANTITY_ASC:
+                checkedId = R.id.sort_quantity;
+                break;
+            case NEWEST_FIRST:
+                checkedId = R.id.sort_newest;
+                break;
+            case NAME_ASC:
+            default:
+                checkedId = R.id.sort_name;
+                break;
+        }
+        MenuItem checked = menu.findItem(checkedId);
+        if (checked != null) {
+            checked.setChecked(true);
+        }
+        return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
+        if (id == R.id.sort_name) {
+            item.setChecked(true);
+            viewModel.setSortOrder(ItemSortOrder.NAME_ASC);
+            return true;
+        }
+        if (id == R.id.sort_quantity) {
+            item.setChecked(true);
+            viewModel.setSortOrder(ItemSortOrder.QUANTITY_ASC);
+            return true;
+        }
+        if (id == R.id.sort_newest) {
+            item.setChecked(true);
+            viewModel.setSortOrder(ItemSortOrder.NEWEST_FIRST);
+            return true;
+        }
         if (id == R.id.action_sms_settings) {
             startActivity(new Intent(this, SmsSettingsActivity.class));
             return true;

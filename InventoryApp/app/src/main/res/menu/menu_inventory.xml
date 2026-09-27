@@ -3,10 +3,40 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_search"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="@string/menu_search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="ifRoom|collapseActionView" />
+
+    <item
+        android:id="@+id/action_sort"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="@string/menu_sort"
+        app:showAsAction="ifRoom">
+        <menu>
+            <group
+                android:id="@+id/group_sort"
+                android:checkableBehavior="single">
+                <item
+                    android:id="@+id/sort_name"
+                    android:checked="true"
+                    android:title="@string/sort_name" />
+                <item
+                    android:id="@+id/sort_quantity"
+                    android:title="@string/sort_quantity" />
+                <item
+                    android:id="@+id/sort_newest"
+                    android:title="@string/sort_newest" />
+            </group>
+        </menu>
+    </item>
+
+    <item
         android:id="@+id/action_sms_settings"
         android:icon="@android:drawable/ic_menu_preferences"
         android:title="@string/menu_settings"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
 
     <item
         android:id="@+id/action_logout"

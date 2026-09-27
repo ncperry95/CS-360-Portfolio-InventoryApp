@@ -159,8 +159,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // -------------------- Inventory --------------------
 
+    /**
+     * Loads every item the user owns, in row id order. Sorting for display
+     * happens in memory (see domain.ItemSortOrder), so the query itself does
+     * not carry an ORDER BY on name or quantity.
+     */
     public List<InventoryItem> getInventoryForUser(long userId) {
-        List<InventoryItem> items = new ArrayList<>();
+        ArrayList<InventoryItem> items = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
         try (Cursor cursor = db.query(
                 TABLE_INVENTORY,
@@ -169,8 +174,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{String.valueOf(userId)},
                 null, null,
                 ITEM_ID + " ASC")) {
+            // Column lookups are resolved once, outside the loop, instead of
+            // three string searches per row.
+            int idIndex = cursor.getColumnIndexOrThrow(ITEM_ID);
+            int nameIndex = cursor.getColumnIndexOrThrow(ITEM_NAME);
+            int quantityIndex = cursor.getColumnIndexOrThrow(ITEM_QUANTITY);
+            items.ensureCapacity(cursor.getCount());
             while (cursor.moveToNext()) {
-                items.add(readItem(cursor));
+                items.add(new InventoryItem(
+                        cursor.getLong(idIndex),
+                        cursor.getString(nameIndex),
+                        cursor.getInt(quantityIndex)));
             }
         }
         return items;

@@ -16,6 +16,21 @@
     <string name="menu_settings">SMS Settings</string>
     <string name="menu_logout">Log Out</string>
     <string name="empty_inventory">No items yet. Tap + to add one.</string>
+    <string name="empty_filtered">No items match.</string>
+
+    <!-- Search and sort -->
+    <string name="menu_search">Search</string>
+    <string name="search_hint">Search items</string>
+    <string name="menu_sort">Sort</string>
+    <string name="sort_name">Name A to Z</string>
+    <string name="sort_quantity">Quantity, low to high</string>
+    <string name="sort_newest">Newest first</string>
+
+    <!-- Low stock banner -->
+    <string name="low_stock_banner">Low stock: %1$s</string>
+    <string name="low_stock_banner_more">Low stock: %1$s and %2$d more</string>
+    <string name="low_stock_entry">%1$s (%2$d)</string>
+    <string name="low_stock_showing_only">Showing low stock only. Tap to show everything.</string>
 
     <!-- Item detail -->
     <string name="title_item_detail">Item Details</string>
