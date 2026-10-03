@@ -3,7 +3,7 @@ package com.snhu.inventoryapp;
 import android.content.Context;
 
 import com.snhu.inventoryapp.auth.SessionManager;
-import com.snhu.inventoryapp.data.DatabaseHelper;
+import com.snhu.inventoryapp.data.AppDatabase;
 import com.snhu.inventoryapp.data.InventoryRepository;
 import com.snhu.inventoryapp.data.UserRepository;
 import com.snhu.inventoryapp.security.PasswordHasher;
@@ -16,8 +16,10 @@ import java.util.concurrent.Executors;
  * hands them to ViewModels through {@link ViewModelFactory}.
  *
  * This replaces the original pattern where each Activity created its own
- * DatabaseHelper and never closed it. Now there is one helper, one executor,
- * one session, and one instance of each repository for the whole process.
+ * DatabaseHelper and never closed it. Now there is one Room database, one
+ * executor, one session, and one instance of each repository for the whole
+ * process. Opening the database the first time after an upgrade runs the
+ * migration from the original schema.
  */
 public class AppContainer {
 
@@ -27,15 +29,15 @@ public class AppContainer {
      */
     private final ExecutorService databaseExecutor = Executors.newSingleThreadExecutor();
 
-    private final DatabaseHelper databaseHelper;
+    private final AppDatabase database;
     private final SessionManager sessionManager = new SessionManager();
     private final UserRepository userRepository;
     private final InventoryRepository inventoryRepository;
 
     public AppContainer(Context appContext) {
-        databaseHelper = new DatabaseHelper(appContext.getApplicationContext());
-        userRepository = new UserRepository(databaseHelper, new PasswordHasher(), databaseExecutor);
-        inventoryRepository = new InventoryRepository(databaseHelper, databaseExecutor);
+        database = AppDatabase.create(appContext.getApplicationContext());
+        userRepository = new UserRepository(database.userDao(), new PasswordHasher(), databaseExecutor);
+        inventoryRepository = new InventoryRepository(database.inventoryDao(), databaseExecutor);
     }
 
     public SessionManager getSessionManager() {

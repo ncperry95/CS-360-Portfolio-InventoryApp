@@ -1,6 +1,10 @@
 package com.snhu.inventoryapp.data;
 
+import android.content.Context;
+
+import androidx.annotation.NonNull;
 import androidx.room.Database;
+import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
 /**
@@ -10,8 +14,9 @@ import androidx.room.RoomDatabase;
  * original SQLiteOpenHelper. exportSchema writes the schema for each version
  * to app/schemas so every schema change is versioned in the repo.
  *
- * Not used by the app yet. The migration from version 1, the triggers, and
- * the switch over from DatabaseHelper come in the next step.
+ * There is deliberately no fallbackToDestructiveMigration. If a future
+ * version ships without a migration, the app fails loudly instead of quietly
+ * deleting everyone's inventory the way the original onUpgrade did.
  */
 @Database(
         entities = {UserEntity.class, InventoryItemEntity.class},
@@ -24,4 +29,27 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract UserDao userDao();
 
     public abstract InventoryDao inventoryDao();
+
+    /** The app's on disk database. AppContainer calls this exactly once. */
+    @NonNull
+    public static AppDatabase create(@NonNull Context context) {
+        return create(context, DATABASE_NAME);
+    }
+
+    /** Opens a database file by name. Tests use this to run the migration. */
+    @NonNull
+    static AppDatabase create(@NonNull Context context, @NonNull String name) {
+        return Room.databaseBuilder(context.getApplicationContext(), AppDatabase.class, name)
+                .addMigrations(Migrations.MIGRATION_1_2)
+                .addCallback(new SchemaRules.Callback())
+                .build();
+    }
+
+    /** An in memory database with the same rules as the real one. Tests only. */
+    @NonNull
+    static AppDatabase createInMemory(@NonNull Context context) {
+        return Room.inMemoryDatabaseBuilder(context.getApplicationContext(), AppDatabase.class)
+                .addCallback(new SchemaRules.Callback())
+                .build();
+    }
 }

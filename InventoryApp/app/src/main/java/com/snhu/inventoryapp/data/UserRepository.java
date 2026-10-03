@@ -9,7 +9,7 @@ import java.util.concurrent.Executor;
 /**
  * Everything about accounts: creating one and logging in.
  *
- * Sits between the ViewModels and DatabaseHelper so the hashing rules live in
+ * Sits between the ViewModels and UserDao so the hashing rules live in
  * exactly one place. Every public method runs its work on the injected
  * Executor and reports back through a callback, so PBKDF2 (which is slow on
  * purpose) never runs on the main thread.
@@ -20,12 +20,12 @@ public class UserRepository {
 
     public static final int MAX_USERNAME_LENGTH = 32;
 
-    private final DatabaseHelper db;
+    private final UserDao users;
     private final PasswordHasher hasher;
     private final Executor executor;
 
-    public UserRepository(DatabaseHelper db, PasswordHasher hasher, Executor executor) {
-        this.db = db;
+    public UserRepository(UserDao users, PasswordHasher hasher, Executor executor) {
+        this.users = users;
         this.hasher = hasher;
         this.executor = executor;
     }
@@ -83,7 +83,7 @@ public class UserRepository {
     // -------------------- Blocking implementations --------------------
 
     AuthResult loginBlocking(String username, char[] password) {
-        DatabaseHelper.UserRecord user = db.findUser(username);
+        UserEntity user = users.findByUsername(username);
         if (user == null) {
             // Still run one hash so a missing user and a wrong password take
             // similar time. Cheap way to avoid leaking which usernames exist.
@@ -103,7 +103,7 @@ public class UserRepository {
 
         if (hasher.needsRehash(user.passwordHash)) {
             try {
-                db.updatePasswordHash(user.id, hasher.hash(password));
+                users.updatePasswordHash(user.id, hasher.hash(password));
             } catch (IllegalStateException ignored) {
                 // Login already succeeded against the old value. If the
                 // upgrade fails we keep the old row and try again next time.
@@ -113,7 +113,7 @@ public class UserRepository {
     }
 
     AuthResult createAccountBlocking(String username, char[] password) {
-        if (db.userExists(username)) {
+        if (users.userExists(username)) {
             return AuthResult.failure(AuthResult.Error.USERNAME_TAKEN);
         }
         String encoded;
@@ -124,10 +124,10 @@ public class UserRepository {
             // stored the plaintext here.
             return AuthResult.failure(AuthResult.Error.STORAGE_FAILED);
         }
-        long id = db.insertUser(username, encoded);
+        long id = users.insert(new UserEntity(username, encoded));
         if (id == -1) {
             // UNIQUE constraint lost the race, or the insert failed outright.
-            return AuthResult.failure(db.userExists(username)
+            return AuthResult.failure(users.userExists(username)
                     ? AuthResult.Error.USERNAME_TAKEN
                     : AuthResult.Error.STORAGE_FAILED);
         }
