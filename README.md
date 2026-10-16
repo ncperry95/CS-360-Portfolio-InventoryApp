@@ -1,12 +1,71 @@
-# CS-360-Portfolio-InventoryApp
+# InventoryApp
 
-CS 360 portfolio submission. A user authenticated inventory management app for Android.
+An Android inventory app I originally built for CS 360 Mobile Architecture and Programming at SNHU and then reworked for my CS 499 capstone. Each user logs in to their own private inventory, browses it in a grid, searches and sorts it, and can get a text message when an item runs low.
 
-## About this repository
+My CS 499 ePortfolio, with the code review video and the narrative for each enhancement, is at https://ncperry95.github.io/
 
-This repository contains the completed app code from Project Three of CS 360 Mobile Architecture and Programming at SNHU. The ZIP file in this repo includes the finalized UI design that was originally built in Project Two and then extended with full backend functionality in Project Three.
+## Versions
 
-## Reflection
+The main branch has the finished version. Each stage of the project is tagged so you can browse the code exactly as it was at that point.
+
+* [original_cs360](https://github.com/ncperry95/CS-360-Portfolio-InventoryApp/tree/original_cs360): the app as I turned it in for CS 360
+* [enhancement_one](https://github.com/ncperry95/CS-360-Portfolio-InventoryApp/tree/enhancement_one): software design and engineering
+* [enhancement_two](https://github.com/ncperry95/CS-360-Portfolio-InventoryApp/tree/enhancement_two): algorithms and data structures
+* [enhancement_three](https://github.com/ncperry95/CS-360-Portfolio-InventoryApp/tree/enhancement_three): databases, which is the same code as main
+
+## What changed from the original
+
+### Software design and engineering
+
+* Split the app into screens, ViewModels, and repositories so the activities don't talk to the database directly
+* Moved database work off the main thread
+* Every item read, update, and delete now checks that the item belongs to the logged in user. The original only checked the item id, so one user could reach another user's items if they knew the id.
+* Replaced unsalted SHA256 password hashes with PBKDF2WithHmacSHA256 using 100,000 iterations and a random 16 byte salt, checked with a constant time comparison. Accounts that still have an old hash can log in and get rehashed right then.
+* Removed a fallback that saved the plain password if hashing failed
+* Raised minSdk from 24 to 26, since that's where PBKDF2WithHmacSHA256 becomes available
+
+### Algorithms and data structures
+
+* Name search uses a prefix trie, so results narrow as you type without scanning the whole list each time
+* Sort options are built from comparators
+* Low stock items are tracked with a heap based priority queue
+* The grid uses DiffUtil, so only the items that actually changed get redrawn
+
+### Databases
+
+* Moved from a hand written SQLiteOpenHelper class to Room 2.8.5
+* Added a real migration from the old version 1 database to version 2 instead of dropping every table on upgrade. It keeps existing users and items, sets any negative quantity to 0, removes items whose owner no longer exists, and keeps the id counters where they were.
+* Added a unique index on username and an index on owner_user_id
+* Added a foreign key from inventory.owner_user_id to users.id with cascade delete
+* Added triggers that reject negative quantities, even from code that skips the repository
+* Room exports the schema to app/schemas, so schema changes get tracked like any other source file
+* The database is excluded from cloud backups and device to device transfer
+
+## Tests
+
+There are 84 tests and all of them pass.
+
+* 57 unit tests run on the JVM and cover password hashing, password rules, the trie, sorting, the low stock queue and rule, and the item model
+* 27 instrumented tests run on an emulator and cover the DAOs, both repositories, and the version 1 to 2 migration. They include checks that one user can't read, change, or delete another user's item.
+
+From the InventoryApp folder:
+
+    gradlew testDebugUnitTest
+    gradlew connectedDebugAndroidTest
+
+The second command needs an emulator or a connected device.
+
+## Building
+
+Open the InventoryApp folder in Android Studio. The project was built and tested with JDK 17, compileSdk and targetSdk 36, and minSdk 26, and last tested on a Pixel 7 emulator running API 34.
+
+## License
+
+MIT. See the LICENSE file.
+
+## Original CS 360 reflection
+
+I wrote this for my CS 360 portfolio before any of the capstone work, so it describes the original version of the app, including the DatabaseHelper class that Room has since replaced.
 
 ### Briefly summarize the requirements and goals of the app you developed. What user needs was this app designed to address?
 
